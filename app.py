@@ -91,15 +91,13 @@ HTML_TEMPLATE = """
 <body>
     <div class="header">
         <h1>🚀 Ava — Real Estate Copywriter</h1>
-        <span>Powered by Agent Coach AI (Gemini 2.0 Flash)</span>
+        <span>Powered by Agent Coach AI</span>
     </div>
 
     <div class="chat-container">
         <div class="message bot-message">
             <div class="bot-avatar">A</div>
             <div class="message-content">Hi, I'm <strong>Ava</strong> — your senior real-estate copywriter from AgentCoachAI.com.
-
-I create persuasive, cinematic, and Fair-Housing-compliant property descriptions designed to sell.
 
 <strong>Please type the raw property details below.</strong> 
 (Include Address, Beds/Baths, SqFt, Key features, upgrades, and neighborhood highlights).</div>
@@ -166,3 +164,4 @@ def home():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
