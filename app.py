@@ -90,6 +90,7 @@ HTML_TEMPLATE = """
         .error { color: #e53e3e; background: #fff5f5; padding: 10px; border-radius: 6px; margin-top: 20px; text-align: center; }
     </style>
 </head>
+"""
 <body>
     <div class="container">
         <h1>🏡 Ava: Real Estate AI</h1>
@@ -118,4 +119,6 @@ HTML_TEMPLATE = """
             
             <div class="form-group">
                 <label>Key Features & Upgrades</label>
+
                 <textarea name="features" placeholder="e.g. Renovated chef's kitchen, quartz island, hardwood floors,
+               
