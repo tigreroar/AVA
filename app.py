@@ -9,14 +9,12 @@ load_dotenv()
 app = Flask(__name__)
 
 # Configure Gemini API
-# Railway looking for GOOGLE_API_KEY
 api_key = os.environ.get("GOOGLE_API_KEY")
 
 if api_key:
     genai.configure(api_key=api_key)
 
 # --- AVA SYSTEM PROMPT ---
-# Updated to handle unstructured input from a single chat box
 def get_ava_prompt(user_raw_input):
     return f"""
     You are **Ava**, a senior real-estate copywriter created by **AgentCoachAI**.
@@ -46,7 +44,7 @@ def get_ava_prompt(user_raw_input):
     {user_raw_input}
     """
 
-# --- FRONTEND (DARK CHAT UI HTML/CSS) ---
+# --- FRONTEND (DARK CHAT UI) ---
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
@@ -60,26 +58,22 @@ HTML_TEMPLATE = """
             --bg-color: #121212;
             --chat-bg: #1E1E1E;
             --text-color: #E0E0E0;
-            --accent-color: #7C4DFF; /* Purple-ish accent like the rocket */
+            --accent-color: #7C4DFF;
             --input-bg: #2C2C2C;
         }
         body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; display: flex; flex-direction: column; height: 100vh; }
         
-        /* Header area */
         .header { padding: 20px; text-align: center; border-bottom: 1px solid #333; }
         .header h1 { margin: 0; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; gap: 10px; }
         .header span { font-size: 0.9rem; color: #888; display: block; margin-top: 5px; }
 
-        /* Main chat area */
         .chat-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; max-width: 900px; margin: 0 auto; width: 100%; box-sizing: border-box; }
         
-        /* Messages */
         .message { display: flex; gap: 15px; max-width: 85%; animation: fadeIn 0.3s ease-in; }
         .bot-avatar { width: 40px; height: 40px; background-color: var(--accent-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;}
         .message-content { background-color: var(--chat-bg); padding: 15px 20px; border-radius: 12px; line-height: 1.6; white-space: pre-wrap; }
         .bot-message .message-content { border-top-left-radius: 2px; }
         
-        /* Input area at bottom */
         .input-area { padding: 20px; background-color: var(--bg-color); border-top: 1px solid #333; }
         .input-form { max-width: 900px; margin: 0 auto; position: relative; display: flex; }
         textarea { width: 100%; background-color: var(--input-bg); border: 1px solid #444; border-radius: 25px; color: white; padding: 15px 50px 15px 20px; resize: none; height: 60px; font-family: inherit; outline: none; }
@@ -91,14 +85,13 @@ HTML_TEMPLATE = """
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* Styling the generated output nicely */
         h3 { color: var(--accent-color); margin-top: 25px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>🚀 Ava — Real Estate Copywriter</h1>
-        <span>Powered by Agent Coach AI</span>
+        <span>Powered by Agent Coach AI (Gemini 2.0 Flash)</span>
     </div>
 
     <div class="chat-container">
@@ -109,11 +102,11 @@ HTML_TEMPLATE = """
 I create persuasive, cinematic, and Fair-Housing-compliant property descriptions designed to sell.
 
 <strong>Please type the raw property details below.</strong> 
-(Include Address, Beds/Baths, SqFt, Key features, upgrades, and neighborhood highlights all in one message).</div>
+(Include Address, Beds/Baths, SqFt, Key features, upgrades, and neighborhood highlights).</div>
         </div>
 
         {% if error %}
-        <div class="error-box">Is there a problem? {{ error }}</div>
+        <div class="error-box">⚠️ {{ error }}</div>
         {% endif %}
 
         {% if generated_text %}
@@ -126,17 +119,15 @@ I create persuasive, cinematic, and Fair-Housing-compliant property descriptions
 
     <div class="input-area">
         <form class="input-form" method="POST" action="/">
-            <textarea name="user_input" placeholder="Type property details here (e.g., 123 Maple St, 3 bed 2 bath, new kitchen, near park...)" required></textarea>
+            <textarea name="user_input" placeholder="Type property details here..." required></textarea>
             <button type="submit" class="send-btn">➤</button>
         </form>
     </div>
 
     <script>
-        // Auto-scroll to bottom when new message arrives
         const chatContainer = document.querySelector('.chat-container');
         chatContainer.scrollTop = chatContainer.scrollHeight;
 
-        // Submit form on Enter key (optional, but feels more like chat)
         document.querySelector('textarea').addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -156,23 +147,20 @@ def home():
     
     if request.method == "POST":
         if not api_key:
-            error_message = "⚠️ System Error: Google API Key is missing in Railway Variables."
+            error_message = "Error: Google API Key missing in Railway."
         else:
             try:
-                # 1. Get the single block of text from the chat input
                 user_input_block = request.form.get("user_input")
                 
-                # 2. Call Gemini
-                # ERROR FIX: Changed model to 'gemini-pro' which is currently stable.
-                # If 'gemini-1.5-flash' becomes available later, you can change it back here.
-                model = genai.GenerativeModel('gemini-pro')
+                # ACTUALIZADO: Usando Gemini 2.0 Flash Experimental
+                # Nota: Si este falla, cambia a 'gemini-1.5-flash'
+                model = genai.GenerativeModel('gemini-2.0-flash-exp')
                 
                 response = model.generate_content(get_ava_prompt(user_input_block))
                 generated_text = response.text
                 
             except Exception as e:
-                # Show the actual error in the chat for debugging
-                error_message = f"An error occurred during generation: {str(e)}"
+                error_message = f"Error with Gemini 2.0: {str(e)}"
 
     return render_template_string(HTML_TEMPLATE, generated_text=generated_text, error=error_message)
 
