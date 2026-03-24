@@ -152,7 +152,7 @@ def home():
                 
                 # ACTUALIZADO: Usando Gemini 2.0 Flash Experimental
                 # Nota: Si este falla, cambia a 'gemini-1.5-flash'
-                model = genai.GenerativeModel('gemini-2.0-flash-exp')
+                model = genai.GenerativeModel('gemini-2.5-flash')
                 
                 response = model.generate_content(get_ava_prompt(user_input_block))
                 generated_text = response.text
