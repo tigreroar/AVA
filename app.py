@@ -24,7 +24,7 @@ def get_ava_prompt(user_raw_input):
     
     CRITICAL: OUTPUT LANGUAGE: ENGLISH ONLY.
 
-    OUTPUT FORMAT (Do not include introductory text, just the three versions):
+    OUTPUT FORMAT:
     
     ### 1. Cinematic / Luxury Version
     (400–600 words. Vivid, sensory details, storytelling structure.)
@@ -44,7 +44,7 @@ def get_ava_prompt(user_raw_input):
     {user_raw_input}
     """
 
-# --- FRONTEND (DARK CHAT UI) ---
+# --- FRONTEND (CON INDICADOR DE CARGA) ---
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
@@ -72,19 +72,20 @@ HTML_TEMPLATE = """
         .message { display: flex; gap: 15px; max-width: 85%; animation: fadeIn 0.3s ease-in; }
         .bot-avatar { width: 40px; height: 40px; background-color: var(--accent-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;}
         .message-content { background-color: var(--chat-bg); padding: 15px 20px; border-radius: 12px; line-height: 1.6; white-space: pre-wrap; }
-        .bot-message .message-content { border-top-left-radius: 2px; }
         
+        /* Loading Spinner */
+        .loading-dots { display: none; padding: 10px; font-style: italic; color: #888; }
+        .loading-dots:after { content: ' .'; animation: dots 1.5s steps(5, end) infinite;}
+        @keyframes dots { 0%, 20% { color: rgba(0,0,0,0); text-shadow: .25em 0 0 rgba(0,0,0,0), .5em 0 0 rgba(0,0,0,0); } 40% { color: #888; text-shadow: .25em 0 0 rgba(0,0,0,0), .5em 0 0 rgba(0,0,0,0); } 60% { text-shadow: .25em 0 0 #888, .5em 0 0 rgba(0,0,0,0); } 80%, 100% { text-shadow: .25em 0 0 #888, .5em 0 0 #888; } }
+
         .input-area { padding: 20px; background-color: var(--bg-color); border-top: 1px solid #333; }
         .input-form { max-width: 900px; margin: 0 auto; position: relative; display: flex; }
         textarea { width: 100%; background-color: var(--input-bg); border: 1px solid #444; border-radius: 25px; color: white; padding: 15px 50px 15px 20px; resize: none; height: 60px; font-family: inherit; outline: none; }
-        textarea::placeholder { color: #888; }
+        textarea:disabled { opacity: 0.5; }
         .send-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: var(--accent-color); font-size: 24px; cursor: pointer; padding: 5px 10px; }
-        .send-btn:hover { color: #9E75FF; }
-
-        .error-box { background-color: #cf6679; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center;}
-
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
+        .error-box { background-color: #cf6679; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center;}
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         h3 { color: var(--accent-color); margin-top: 25px; margin-bottom: 10px; }
     </style>
 </head>
@@ -94,13 +95,10 @@ HTML_TEMPLATE = """
         <span>Powered by Agent Coach AI</span>
     </div>
 
-    <div class="chat-container">
+    <div class="chat-container" id="chat-container">
         <div class="message bot-message">
             <div class="bot-avatar">A</div>
-            <div class="message-content">Hi, I'm <strong>Ava</strong> — your senior real-estate copywriter from AgentCoachAI.com.
-
-<strong>Please type the raw property details below.</strong> 
-(Include Address, Beds/Baths, SqFt, Key features, upgrades, and neighborhood highlights).</div>
+            <div class="message-content">Hi, I'm <strong>Ava</strong>. Type the property details below to start.</div>
         </div>
 
         {% if error %}
@@ -113,23 +111,41 @@ HTML_TEMPLATE = """
             <div class="message-content">{{ generated_text }}</div>
         </div>
         {% endif %}
+
+        <div id="loading" class="message bot-message" style="display:none;">
+            <div class="bot-avatar">A</div>
+            <div class="message-content"><span class="loading-dots">Ava is thinking</span></div>
+        </div>
     </div>
 
     <div class="input-area">
-        <form class="input-form" method="POST" action="/">
-            <textarea name="user_input" placeholder="Type property details here..." required></textarea>
-            <button type="submit" class="send-btn">➤</button>
+        <form class="input-form" id="ava-form" method="POST" action="/">
+            <textarea name="user_input" id="user_input" placeholder="Type property details here..." required></textarea>
+            <button type="submit" class="send-btn" id="send-btn">➤</button>
         </form>
     </div>
 
     <script>
-        const chatContainer = document.querySelector('.chat-container');
+        const form = document.getElementById('ava-form');
+        const loading = document.getElementById('loading');
+        const chatContainer = document.getElementById('chat-container');
+        const userInput = document.getElementById('user_input');
+        const sendBtn = document.getElementById('send-btn');
+
+        // Auto-scroll al final
         chatContainer.scrollTop = chatContainer.scrollHeight;
 
-        document.querySelector('textarea').addEventListener('keydown', function(e) {
+        form.onsubmit = function() {
+            loading.style.display = 'flex';
+            userInput.disabled = true;
+            sendBtn.style.display = 'none';
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        };
+
+        userInput.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                this.form.submit();
+                if(this.value.trim() !== "") form.submit();
             }
         });
     </script>
@@ -145,23 +161,22 @@ def home():
     
     if request.method == "POST":
         if not api_key:
-            error_message = "Error: Google API Key missing in Railway."
+            error_message = "Error: Google API Key missing."
         else:
             try:
                 user_input_block = request.form.get("user_input")
                 
-                # ACTUALIZADO: Usando Gemini 2.0 Flash Experimental
-                # Nota: Si este falla, cambia a 'gemini-1.5-flash'
+                # CORRECCIÓN DE MODELO: 'gemini-2.0-flash' es el nombre correcto actual. 
+                # Si quieres estabilidad total usa 'gemini-1.5-flash'
                 model = genai.GenerativeModel('gemini-2.5-flash')
                 
                 response = model.generate_content(get_ava_prompt(user_input_block))
                 generated_text = response.text
                 
             except Exception as e:
-                error_message = f"Error with Gemini 2.0: {str(e)}"
+                error_message = f"Connection error: {str(e)}"
 
     return render_template_string(HTML_TEMPLATE, generated_text=generated_text, error=error_message)
 
 if __name__ == "__main__":
     app.run(debug=True)
-
